@@ -1,0 +1,50 @@
+PARTIE WEB ET DEPLOIEMENT
+
+-------------------------
+
+- Partie Web :
+	- Choix de la solution Apache - Installation du package pour avec la commande "sudo apt-get install apache2"
+	- Ajout d'un nouveau "port forwarding" dans la configuration de ma VM avec les specificites suivantes :
+		- Host IP : je laisse vide
+		- Sur le Port Hote : 8080
+		- Adresse IP invite : 10.0.2.13
+		- Port invite : 80
+	- Ajout d'une nouvelle regle pour l'INPUT dans mon firewall (etc/init.d/firewall) : "iptables -A INPUT -p tcp --dport 80 -m state --state NEW -j ACCEPT"
+	- Je teste en accedant a l'ip "10.13.11.3:8080" ou "127.0.0.1:8080"  ou en passant directement par mon hote : http://e3r11p3.42.fr:8080/ (peut changer en fonction du poste)
+	- La page par defaut d'apache apparait car c'est le site configure par defaut
+	- Creation d'un dossier "/dev/prod/roger-skyline-1" dans "/home" pour heberger les differentes parties de mon site web :
+		- Dedans je mets mes differents fichiers HTML/CSS
+		- La base de donnee a ete cree avec Google Firebase a l'aide de JS
+		- Creation d'un utilisateur dans Firebase
+	- Ajout d'un "Directory" dans "/etc/apache2/apache2.conf"
+	- Modification du "DocumentRoot" dans "/etc/apache2/sites-available/000-default.conf" pour /home/dev/prod/roger-skyline-1
+	- Test de connexion en accedant a mon poste "exrxpx.42.fr:8080"
+		- Connexion avec mon utilisateur Firebase : email : lcordeno@student.42.fr / pw : 123456
+	- Ajout du SSL auto signe :
+		- Activation du SSL avec les commandes : "a2enmod ssl" puis "a2ensite default-ssl"
+		- Creation du dossier pour stocker les certif SSL : "mkdir /etc/apache2/ssl"
+		- Generation de la cle auto-signee et le certif avec openssl :
+		openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/apache2/ssl/stan-selfsigned.key -out /etc/apache2/ssl/stan-selfsigned.crt
+		- Changement des droits avec : chmod 600 /etc/apache2/ssl/*
+		- Ajout d'une interface reseau SSL : port hote 4443 / port invite 443
+		- Edition du fichier default-ssl.conf : nano /etc/apache2/sites-enabled/default-ssl.conf
+		- Ajout d'une regle dans le firewall pour autoriser SSL
+		- Redemarrage du service apache avec : systemctl restart apache2
+		- Ensuite je teste en accedant a : https://127.0.0.1:4443/ dans mon browser ou en accedant a ma machine https://exrxpx:4443/
+	-	- Je peux faire une redirection en modifiant le fichier : /etc/apache2/sites-available/000-default.conf avec la commande 
+		Redirect "/" "https://127.0.0.1:4443" (pour les besoin du projet, je n'ai commente ma redirection afin de montrer ma demarche)
+- Partie Deploiement
+Pour la partie deploiement, je propose une solution d'automatisation des deploiements Git avec un systeme de hooks afin de deployer facilement les mises a jour de mon site automatiquement
+sans passer par un push puis un pull depuis mon ssh
+	- Creation d'un repo sur le serveur dans /home/dev/git 
+	- Je donne des permissions a ce repo pour les "users" et avec chmod 
+	- Je cree un hool nomme "post-receive" qui va recevoir mon script bash pour automatiser les deploiements 
+	- Je cree un repos dans mon ordi local "/Users/lcordeno/42/projects_web/roger-skyline-1-docs/roger-repo"
+		- Je git init dedans 
+		- Je le defini comme remote avec : git remote add deploy ssh://lucas@127.0.0.1:2222/home/dev/git/roger-skyline-1.git 
+	- Ensuite je peux push avec :
+	- git add . 
+	- git commit -m "<commit message>"
+	- git push deploy master
+	- Je teste en tentant de push depuis ma machine locale et ca marche
+

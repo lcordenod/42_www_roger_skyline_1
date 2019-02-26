@@ -1,0 +1,110 @@
+PARTIE RESEAU ET SECURITE
+
+-------------------------
+
+- Utilisateur non root :
+	- username : lucas
+	- pw : 42paris
+- Utilisation de sudo :
+	- Premierement, il faut l'installer en utilisant root et la commande "apt-get install sudo"
+	- Tout en etant root, pour ajouter un utilisateur en tant que sudoer, il faut utiliser la commande "usermod -aG sudo username"
+	- Pour verifier que la commande fonctionne, je peux tester un sudo avec la commande "sudo ls -la /root"
+	- Je l'ai fait avec l'utilisateur "lucas"
+- Configuration IP sans DHCP :
+	- Installation du package pour ifconfig avec la commande "sudo apt-get install net-tools"
+	- Ensuite je fais un "sudo ifconfig" pour afficher la configuration reseau actuelle
+	- Sachant que l'on a un netmask sur /30, on aura donc 2 addresses IP utilisables (car une pour network et broadcast deja utilise)
+	- Je configure une addresse IP fixe et un netmask /30 en editant le fichier /etc/network/interfaces puis en rebootant ma vm avec la commande "reboot"
+		- inet dhcp => inet static
+		- ajouter : address 10.0.2.13
+		- ajouter : netmask 255.255.255.252
+		- ajouter : gateway 10.0.2.2
+- Configuration du SSH :
+	- Ajout dans network sur VirtualBox d'une nouvelle regle dans port forwarding
+		- Name : SSH
+		- Protocol : TCP
+		- Host IP : 127.0.0.1
+		- Host Port : 2222
+		- Guest IP : 10.0.2.13
+		- Guest Port : 1234
+	- Edition du fichier /etc/ssh/sshd_config :
+		- Changement du port pour 1234
+		- Changer "PermitRootLogin prohibit-password" a "PermitRootLogin no" pour empecher la connexion ssh en root
+		- Restart du service avec la commande : "sudo service ssh restart"
+		- Sur ma machine hote, je genere une cle pour me connecter sans mot de passe mais avec une publickey en utilisant la commande : "ssh-keygen -t rsa -b 4096" - la passphrase est "12345"
+		- Sur ma vm et ma session lucas (en ssh), je cree un dossier avec "mkdir -m 700 .ssh"
+		- Je cree ensuite un fichier ".ssh/authorized_keys"
+		- Je colle ma cle issue de ma machine host qui est enregistree dans "Users/lcordeno/.ssh/id_rsa.pub" vers le fichier "authorized_keys"
+		- Je change les droits pour ce fichier "authorized_keys" avec "chmod 600 .ssh/authorized_keys"
+		- Enfin, je desactive l'authentification par mot de passe dans le fichier "/etc/ssh/sshd_config" en changeant "PasswordAuthentication" a "no"
+- Configuration du parefeu (iptables) :
+	- Premierement, je peux verifier la liste des regles en place en utilisant la commande "sudo iptables -L"
+	- Creation d'un script sh appele "firewall.sh" pour creer des regles
+		- Je regarde les ports utilises avec la commande "sudo netstat --inet -npl"
+	- J'ajoute une regle INPUT pour autoriser la connexion ssh et plusieurs autres regles pour autoriser APT ainsi que pour le flush/les connexions etablies, des politiques par defaut (en premier avec le flush)
+	- Ensuite je deplace le fichier firewall.sh dans le dossier "/etc/init.d pour que le script firewall s'execute a chaque fois que je demarre la machine
+	- Ensuite je change le nom du fichier de "firewall.sh" a "firewall"
+	- Je change egalement ses permissions pour le rendre executable en utilisant la commande "sudo chmod +x firewall"
+	- J'ajoute le header INIT INFO pour que la commande d'apres soit consideree
+	- Enfin je fais la commande "sudo update-rc.d firewall defaults" pour executer la commande firewall au demarrage avec les programmes par defaut
+- Mise en place d'une protection contre les DOS sur les ports ouverts de ma VM
+	- Ajout d'une regle pour accepter le ping afin de verifier que mon serveur est bien en vie
+	- Ajout de 3 regles pour les protocoles suivants que j'utilise : TCP, UDP, ICMP
+	- Pour eviter les surcharges des attaques DOS je limite a 1 par seconde le nombre de demande de connexions
+	- Installation d'une protection complementaire : Fail2ban
+		- "sudo apt-get install fail2ban" pour l'installer
+		- Copie du fichier de configuration (pour conserver la configuration a chaque maj de fail2ban) : sudo cp /etc/fail2ban/jail.conf jail.local
+			- Changement de l'action par defaut vers action_mwl, afin de ban, envoyer un email + log d'alerte en faisant => "action = %(action_mwl)s"
+			- J'edite la regle sshd dans le fichier en l'activant avec "enabled = true" et mon "port = 1234" ainsi que le "logpath = /var/log/auth.log" et "maxretry = 3"
+			- Sachant que fail2ban ne marche par defaut qu'avec des mots de passe, j'ai ajoute une expression reguliere dans le fichier "/etc/fail2ban/filter.d/sshd.conf" pour gerer les passphrase (publickey)  : ^%(__prefix_line)sConnection closed by <HOST> port \d+ \[preauth\]$
+			- Je redemarre le service ensuite avec la commande "sudo service fail2ban restart"
+			- Je verifie que ma jail est bien active : "sudo fail2ban-client status"
+			- Je teste ensuite en essayant de me connecter depuis mon terminal :
+				- "ssh lucas@127.0.0.1 -p 2222" plusieurs fois jusqu'au maxretry
+				- Ensuite je vois que je ne peux plus me connecter, la commande precedente ne reponds pas 
+				- Je verifie le statut de mon fail2ban pour ssh avec : sudo fail2ban-client status sshd et je vois mon IP bannie
+				- Je peux egalement voir quelle expression reguliere a ete bloquee : sudo fail2ban-regex /var/log/auth.log /etc/fail2ban/filter.d/sshd.conf
+				- Je peux la debannir en utilisant la commande : sudo fail2ban-client set sshd unbanip 10.0.2.2
+- Mise en place d'une protection contre les scans sur les ports ouverts de ma VM
+	- Ajout de regles simples limitant le port-scanning dans mon fichier firewall 
+	- Installation de Portsentry pour plus de securite avec la commande : sudo apt-get install portsentry 
+	- Configuration de Portsentry :
+		- Configuration avec "sudo nano /etc/portsentry/portsentry.conf"
+			- Je commente les lignes "KILL_HOSTS_DENY" et je decommente "KILL_ROUTE="/sbin/iptables -I INPUT -s $TARGET$ -j DROP" afin que Porsentry ajoute une regle dans le firewall
+			pour rejeter les paquets en cas de scan 
+			- Je modifie le fichier "/etc/default/portsentry" pour remplace "tcp" / "udp" par "atcp" "audp" qui va premettre d'eviter de preciser les ports, il va verifier automatique
+			ment les ports dispos
+			- Je redemarre le service avec "sudo service portsentry restart"
+- Arreter les services dont je n'ai pas besoin pour le projet
+	- Premierement je liste les services pour savoir lesquels je n'ai pas besoin avec la commande : service --status-all
+	- Je peux supprimmer les programmes inutiles avec la commande : "apt-get remove" ou "apt-get autoremove" (pour inclure les dependances) et je peux ajouter "--purge" pour inclure
+	les fichiers de configuration
+- Creation d'un script plannifie qui met a jour les packages :
+	- Creation d'un dossier script a la racine "/"
+	- Creation du fichier script "update_script" ainsi que le fichier de log associe
+		- Ajout du header sh
+		- Utilisation de la commande exec et >> pour ajouter le tout dans "/var/log/update_script.log"
+		- Ajout de la commande "date"
+		- Ajout de la commande "apt-get -y update" 
+		- Ajout de la commande "apt-get -y upgrade"
+		- L'option "-y" permet de repondre automatiquement a un prompt
+		- Ajout d'un retour a la ligne pour ameliorer la lisibilite
+		- Changement des droits du fichier avec chmod
+		- Creation d'un fichier "/var/log/update_script.log"
+	- Creation d'une tache planifiee une fois par semaine a 4h00 du matin et a chaque reboot de la machine
+		- Je me met en root pour voir mon crontab car je prefere le faire avec un user admin (meme si je me connecte avec un user, le crontab fonctionne mais je ne peux pas le voir)
+		- Utilisation de la commande "crontab -e" qui permet d'editer notre cron perso
+		- Ajout de la premiere tache planifiee une fois par semaine a 4h00 avec : "* 4 * * 1 sh /script/update_script"
+		- Ajout de la tache au reboot avec : "@reboot sh /script/update_script
+		- Ensuite je sauvegarde et je reboot pour tester, je peux egalement checker le fichier de log pour verifier que mon script s'est bien execute
+- Creation d'un script qui surveille /etc/crontab et qui previent d'un changement 
+	- Dans mon dossier /script, je cree un fichier "watch_crontab" et je lui donne les droits d'execution
+			- Il s'agit d'un script bash que je dois executer avec bash
+			- Je fais un if pour verifier si avec la commande "-mtime 0" le fichier a ete modifie sur ces dernieres 24h
+			- Si c'est le cas j'envoi un mail avec la commande mail et un sujet -s destine a root
+			- Il faut  que j'installe le package pour mail avec la commande "apt-get install bsd-mailx"
+			- Je peux faire des tests avec un fichier de test, ce que j'ai fait, et verifier que les mails atterissent bien dans /var/mail/lucas et destine a root 
+	- Ajout de la tache planifiee
+		- Ajouter dans crontab avec "crontab -e"
+		- Ajout d'une regle avec " 0 0 * * * bash /script/watch_crontab" pour lancer le scrit tous les jours a minuit
+		- Je peux verifier en lancant le script avec bash "watch_crontab" et en verifiant /var/mail/mai tout en modifiant le fichier /etc/crontab

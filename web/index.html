@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+
+    <ul class="topnav">
+        <li><a class="active" href="#home">Home</a></li>
+        <li class="rightDisable" id="logoutbtn"><a href="#">Logout</a></li>
+      </ul>
+      
+      <div style="padding:0 16px;">
+        <h2>Roger-Skyline-1 - Login page</h2>
+        <p>Welcome to my login page :)</p>
+        <p>This site allows you to login and logout</p>
+        <p>You are currently: <span id="loggedOutColor">logged out</span></p>
+        <img src="https://purrfectlove.net/wp-content/uploads/2018/01/I-Kill-You-Cat.gif" alt="Just a cat :)" class="cat">
+        <h4>Click the button below to login</h4>
+
+<button onclick="document.getElementById('id01').style.display='block'" style="width:auto;">Login</button>
+
+<div id="id01" class="modal">
+  
+  <div class="modal-content animate">
+    <div class="imgcontainer">
+      <span onclick="document.getElementById('id01').style.display='none'" class="close" title="Close Modal">&times;</span>
+      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/42_Logo.svg/1200px-42_Logo.svg.png" alt="Avatar" class="avatar">
+    </div>
+
+    <div class="container">
+      <label for="email"><b>Email</b></label>
+      <input type="text" placeholder="Enter Email" id="email" required>
+
+      <label for="psw"><b>Password</b></label>
+      <input type="password" placeholder="Enter Password" id="psw" required>
+        
+      <button onclick="signIn()">Login</button>
+    </div>
+
+    <div class="container" style="background-color:#f1f1f1">
+      <button type="button" onclick="document.getElementById('id01').style.display='none'" class="cancelbtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/5.7.3/firebase.js"></script>
+<script>
+  // Firebase DB
+  // Initialize Firebase
+  var config = {
+    apiKey: "AIzaSyATCyJQu-56q9wcD-7jqvBVzIF2Ssf2Y3w",
+    authDomain: "roger-skyline-1.firebaseapp.com",
+    databaseURL: "https://roger-skyline-1.firebaseio.com",
+    projectId: "roger-skyline-1",
+    storageBucket: "roger-skyline-1.appspot.com",
+    messagingSenderId: "392009835723"
+  };
+  firebase.initializeApp(config);
+</script>
+
+<script>
+function signIn()
+{
+  var email = document.getElementById("email").value;
+  var passwd = document.getElementById("psw").value;
+  firebase.auth().signInWithEmailAndPassword(email, passwd).then(() => {window.location.href="logged.html"}).catch(function(error) {
+  // Handle Errors here.
+  var errorCode = error.code;
+  var errorMessage = error.message;
+  alert(errorMessage);
+});
+}
+/*
+function showButton(id)
+{
+  var elem = document.getElementById(id);
+  elem.style.display = "initial";
+}
+
+function reloadPage()
+{
+  location.reload();
+}
+*/
+</script>
+
+<script>
+// Get the modal
+var modal = document.getElementById('id01');
+
+// Close modal
+window.onclick = function(event) {
+    if (event.target == modal) {
+        consoq
+        modal.style.display = "none";
+    }
+}
+</script>
+
+</body>
+</html>

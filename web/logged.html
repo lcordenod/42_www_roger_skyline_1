@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+
+    <ul class="topnav">
+        <li><a class="active" href="#home">Home</a></li>
+        <li class="rightEnable" id="logoutbtn" onclick="signOut()"><a href="#">Logout</a></li>
+      </ul>
+      
+      <div style="padding:0 16px;">
+        <h2>Roger-Skyline-1 - Logged page</h2>
+        <p>Well done! You are connected :)</p>
+        <p>This site allows you to login and logout</p>
+        <p>You are currently: <span id="loggedInColor">logged in</span></p>
+        <img src="https://purrfectlove.net/wp-content/uploads/2018/01/Cat-Typing.gif" alt="Just another cat :)" class="cat2">
+        <h4>Click the button on top to logout</h4>
+
+<script src="https://www.gstatic.com/firebasejs/5.7.3/firebase.js"></script>
+<script>
+  // Firebase DB
+  // Initialize Firebase
+  var config = {
+    apiKey: "AIzaSyATCyJQu-56q9wcD-7jqvBVzIF2Ssf2Y3w",
+    authDomain: "roger-skyline-1.firebaseapp.com",
+    databaseURL: "https://roger-skyline-1.firebaseio.com",
+    projectId: "roger-skyline-1",
+    storageBucket: "roger-skyline-1.appspot.com",
+    messagingSenderId: "392009835723"
+  };
+  firebase.initializeApp(config);
+</script>
+
+<script>
+function signOut()
+{
+firebase.auth().signOut().then(() => {window.location.href="index.html"}).catch(function(error) {
+  // An error happened.
+  alert("Disconnected");
+});
+}
+</script>
+
+</body>
+</html>

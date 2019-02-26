@@ -1,0 +1,11 @@
+PARTIE OBLIGATOIRE
+
+--------------------
+
+- Taille de disque de 8 Go au moment de la creation de la VM
+	- "fdisk -l | grep Disk"
+- Partition de 4.2 Go au moment de l'installation de la VM (Manual partitionning)
+	- Pour verifier, faire la commade : "fdisk -l /dev/sda1"
+- Pour avoir une VM a jour ainsi que l'ensemble des packages installes :
+	- apt-get update
+	- apt-get upgrade
